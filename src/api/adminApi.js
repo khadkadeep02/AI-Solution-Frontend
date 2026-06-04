@@ -1,6 +1,6 @@
 import axios from "axios";
 
-export const API_BASE = "http://127.0.0.1:8001/api";
+export const API_BASE = "http://127.0.0.1:8000/api";
 
 const ACCESS_TOKEN_KEY = "admin_access_token";
 const REFRESH_TOKEN_KEY = "admin_refresh_token";

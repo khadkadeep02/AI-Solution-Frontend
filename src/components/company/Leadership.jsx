@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { FaGithub, FaLinkedinIn } from "react-icons/fa";
 
-const API_BASE = "http://127.0.0.1:8001/api";
+const API_BASE = "http://127.0.0.1:8000/api";
 
 export default function Leadership() {
   const [teamMembers, setTeamMembers] = useState([]);

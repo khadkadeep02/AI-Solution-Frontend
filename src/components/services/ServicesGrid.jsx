@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { ChevronDown } from "lucide-react";
 
-const API_BASE = "http://127.0.0.1:8001/api";
+const API_BASE = "http://127.0.0.1:8000/api";
 
 const COLOR_MAP = {
   blue:   { bg: "bg-blue-50",   icon: "text-blue-700",   tag: "bg-blue-50 text-blue-800",   imageBg: "bg-blue-50"   },

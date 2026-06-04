@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { Bot, Loader2, MessageCircle, Send, X } from "lucide-react";
 
-const API_BASE = "http://127.0.0.1:8001/api";
+const API_BASE = "http://127.0.0.1:8000/api";
 const MAX_WORDS = 120;
 
 const initialMessages = [
