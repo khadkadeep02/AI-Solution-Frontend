@@ -58,13 +58,6 @@ export default function Gallery() {
         ))}
 
       </div>
-
-      <div className="text-center mt-12">
-        <button className="px-8 py-3 border border-slate-700 rounded-full">
-          Load More Archive
-        </button>
-      </div>
-
     </section>
   );
 }

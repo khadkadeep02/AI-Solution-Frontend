@@ -7,7 +7,6 @@ export default function Testimonials() {
   return (
     <>
       <TestimonialsHero />
-      <RatingSummary />
       <TestimonialsGrid />
       <FeedbackForm />
     </>
