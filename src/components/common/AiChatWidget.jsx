@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, Fragment } from "react";
 import axios from "axios";
 import { Bot, Send, X, MessageCircle, Sparkles } from "lucide-react";
 
@@ -21,6 +21,69 @@ function getErrorMessage(error) {
   const detail = error.response?.data?.detail;
   if (typeof detail === "string") return detail;
   return "Unable to reach the assistant right now.";
+}
+
+/* ---------- Lightweight markdown renderer ----------
+ * Handles the subset of markdown LLM responses typically use:
+ * **bold**, "* " / "- " bullet lists, and paragraph breaks.
+ * This avoids showing raw "**" / "*" characters and avoids the
+ * ugly, uneven line-wrapping that comes from rendering markdown
+ * as plain pre-formatted text.
+ */
+function renderInline(text, keyPrefix) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={`${keyPrefix}-b-${i}`} className="font-semibold">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return <Fragment key={`${keyPrefix}-t-${i}`}>{part}</Fragment>;
+  });
+}
+
+function MessageContent({ text }) {
+  const lines = text.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
+
+  const blocks = [];
+  let currentList = null;
+
+  lines.forEach((line, idx) => {
+    const isBullet = /^[*-]\s+/.test(line);
+    if (isBullet) {
+      const content = line.replace(/^[*-]\s+/, "");
+      if (!currentList) {
+        currentList = { type: "list", items: [] };
+        blocks.push(currentList);
+      }
+      currentList.items.push(content);
+    } else {
+      currentList = null;
+      blocks.push({ type: "p", content: line, key: idx });
+    }
+  });
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      {blocks.map((block, i) =>
+        block.type === "list" ? (
+          <ul key={`list-${i}`} className="ml-4 list-disc space-y-0.5">
+            {block.items.map((item, j) => (
+              <li key={`item-${i}-${j}`} className="break-words">
+                {renderInline(item, `li-${i}-${j}`)}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p key={`p-${i}`} className="break-words">
+            {renderInline(block.content, `p-${i}`)}
+          </p>
+        )
+      )}
+    </div>
+  );
 }
 
 function TypingIndicator() {
@@ -54,7 +117,7 @@ function Message({ message }) {
           </div>
         )}
         <div
-          className={`max-w-[75%] rounded-2xl px-3 py-2 text-[13.5px] leading-relaxed ${
+          className={`max-w-[85%] min-w-0 rounded-2xl px-3 py-2 text-[13.5px] leading-relaxed [overflow-wrap:break-word] [word-break:normal] [hyphens:auto] ${
             isUser
               ? "rounded-br-sm bg-blue-500 text-white"
               : message.tone === "error"
@@ -62,7 +125,11 @@ function Message({ message }) {
                 : "rounded-bl-sm border border-slate-200 bg-slate-100 text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
           }`}
         >
-          <p className="whitespace-pre-line break-words">{message.text}</p>
+          {isUser ? (
+            <p className="break-words">{message.text}</p>
+          ) : (
+            <MessageContent text={message.text} />
+          )}
         </div>
       </div>
       {message.time && (
@@ -161,7 +228,7 @@ export default function AiChatWidget() {
     <div className="fixed bottom-5 right-5 z-[90] flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
       {open && (
         <section
-          className="flex h-[min(72vh,560px)] w-[min(calc(100vw-2.5rem),360px)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-950"
+          className="flex h-[min(72vh,560px)] w-[min(calc(100vw-2.5rem),380px)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-950"
           aria-label="AI assistant chat"
         >
           {/* Header */}

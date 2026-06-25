@@ -4,7 +4,7 @@ import axios from "axios";
 const API_BASE = import.meta.env.VITE_API_BASE;
 
 const COUNTRIES = [
-  "United States", "United Kingdom", "Germany",
+  "United States","Nepal", "United Kingdom", "Germany",
   "Japan", "India", "Australia", "Canada",
 ];
 
@@ -70,7 +70,7 @@ export default function ContactForm() {
         Get in touch
       </p>
       <h2 className="text-2xl font-semibold text-slate-100 mb-1.5">
-        Project inquiry
+        Contact us
       </h2>
       <p className="text-[13px] text-slate-600 mb-8">
         Tell us about your project and we'll be in touch within 24 hours.
