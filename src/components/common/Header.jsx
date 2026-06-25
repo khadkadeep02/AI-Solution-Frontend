@@ -6,7 +6,7 @@ const links = [
   { label: "Services", path: "/services" },
   { label: "Projects", path: "/projects" },
   { label: "Company", path: "/company" },
-  { label: "Events", path: "/events" },
+  { label: "Events & Gallery", path: "/events" },
   { label: "Testimonials", path: "/testimonials" },
 ];
 

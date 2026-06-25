@@ -92,7 +92,7 @@ export default function ContactForm() {
         <div className="grid md:grid-cols-2 gap-3">
           <Field label="Phone number">
             <input value={phone} onChange={(e) => setPhone(e.target.value)}
-              placeholder="+1 (555) 000-0000" required className={inputCls} />
+               required className={inputCls} />
           </Field>
           <Field label="Company">
             <input value={company} onChange={(e) => setCompany(e.target.value)}
