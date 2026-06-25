@@ -35,10 +35,10 @@ export default function ContactForm() {
         <div className="grid md:grid-cols-2 gap-4">
 
           <select className="bg-slate-950 border border-slate-700 rounded-lg p-3">
-            <option>United States</option>
-            <option>United Kingdom</option>
-            <option>Germany</option>
-            <option>Japan</option>
+            <option>USA</option>
+            <option>UK</option>
+            <option>India</option>
+            <option>Nepal</option>
           </select>
 
           <input

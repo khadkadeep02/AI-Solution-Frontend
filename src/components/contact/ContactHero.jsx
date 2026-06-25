@@ -1,6 +1,6 @@
 export default function ContactHero() {
   return (
-    <section className="max-w-7xl mx-auto px-6 py-20">
+    <section className="max-w-7xl mx-auto px-6">
 
       <h1 className="text-6xl font-bold mb-6">
         Let's build the future

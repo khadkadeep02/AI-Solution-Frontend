@@ -1,15 +1,19 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import axios from "axios";
-import { Bot, Loader2, MessageCircle, Send, X } from "lucide-react";
+import { Bot, Send, X, MessageCircle, Sparkles } from "lucide-react";
 
-const API_BASE = "http://127.0.0.1:8000/api";
+const API_BASE = import.meta.env.VITE_API_BASE;
 const MAX_WORDS = 120;
+
+const formatTime = () =>
+  new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
 const initialMessages = [
   {
     id: "welcome",
     role: "assistant",
-    text: "Hi, I am here to help.",
+    text: "Hi! I'm here to help. Ask me anything.",
+    time: formatTime(),
   },
 ];
 
@@ -19,12 +23,64 @@ function getErrorMessage(error) {
   return "Unable to reach the assistant right now.";
 }
 
+function TypingIndicator() {
+  return (
+    <div className="flex items-end gap-2">
+      <div className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950">
+        <Sparkles size={13} className="text-blue-500" />
+      </div>
+      <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-slate-200 bg-slate-100 px-3 py-3 dark:border-slate-700 dark:bg-slate-800">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="block h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 dark:bg-slate-500"
+            style={{ animationDelay: `${i * 0.15}s`, animationDuration: "0.9s" }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Message({ message }) {
+  const isUser = message.role === "user";
+
+  return (
+    <div className={`flex flex-col gap-1 ${isUser ? "items-end" : "items-start"}`}>
+      <div className={`flex items-end gap-2 ${isUser ? "flex-row-reverse" : ""}`}>
+        {!isUser && (
+          <div className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950">
+            <Sparkles size={13} className="text-blue-500" />
+          </div>
+        )}
+        <div
+          className={`max-w-[75%] rounded-2xl px-3 py-2 text-[13.5px] leading-relaxed ${
+            isUser
+              ? "rounded-br-sm bg-blue-500 text-white"
+              : message.tone === "error"
+                ? "rounded-bl-sm border border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300"
+                : "rounded-bl-sm border border-slate-200 bg-slate-100 text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          }`}
+        >
+          <p className="whitespace-pre-line break-words">{message.text}</p>
+        </div>
+      </div>
+      {message.time && (
+        <p className={`px-1 text-[10px] text-slate-400 dark:text-slate-500 ${isUser ? "pr-2" : "pl-9"}`}>
+          {message.time}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function AiChatWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState(initialMessages);
   const [prompt, setPrompt] = useState("");
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef(null);
+  const textareaRef = useRef(null);
 
   useEffect(() => {
     if (open) {
@@ -32,8 +88,21 @@ export default function AiChatWidget() {
     }
   }, [messages, open]);
 
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => textareaRef.current?.focus(), 100);
+    }
+  }, [open]);
+
+  const autoResize = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 96)}px`;
+  }, []);
+
   const handleSubmit = async (event) => {
-    event.preventDefault();
+    event?.preventDefault();
 
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt || sending) return;
@@ -42,10 +111,12 @@ export default function AiChatWidget() {
       id: `user-${Date.now()}`,
       role: "user",
       text: trimmedPrompt,
+      time: formatTime(),
     };
 
-    setMessages((currentMessages) => [...currentMessages, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setPrompt("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
     setSending(true);
 
     try {
@@ -54,22 +125,24 @@ export default function AiChatWidget() {
         max_words: MAX_WORDS,
       });
 
-      setMessages((currentMessages) => [
-        ...currentMessages,
+      setMessages((prev) => [
+        ...prev,
         {
           id: `assistant-${Date.now()}`,
           role: "assistant",
           text: response.data?.response || "I could not generate a response.",
+          time: formatTime(),
         },
       ]);
     } catch (error) {
-      setMessages((currentMessages) => [
-        ...currentMessages,
+      setMessages((prev) => [
+        ...prev,
         {
           id: `assistant-error-${Date.now()}`,
           role: "assistant",
           text: getErrorMessage(error),
           tone: "error",
+          time: formatTime(),
         },
       ]);
     } finally {
@@ -79,113 +152,92 @@ export default function AiChatWidget() {
 
   const handleKeyDown = (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
-      handleSubmit(event);
+      event.preventDefault();
+      handleSubmit();
     }
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-[90] text-left sm:bottom-6 sm:right-6">
+    <div className="fixed bottom-5 right-5 z-[90] flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
       {open && (
         <section
-          className="mb-4 flex h-[min(72vh,560px)] w-[min(calc(100vw-2.5rem),380px)] flex-col overflow-hidden rounded-xl border border-slate-700 bg-slate-950 shadow-2xl"
+          className="flex h-[min(72vh,560px)] w-[min(calc(100vw-2.5rem),360px)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-950"
           aria-label="AI assistant chat"
         >
-          <header className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-3">
+          {/* Header */}
+          <header className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-blue-700 bg-blue-950 text-blue-300">
-                <Bot size={18} />
+              <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950">
+                <Sparkles size={17} className="text-blue-500" />
+                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-slate-50 bg-emerald-400 dark:border-slate-900" />
               </div>
               <div>
-                <h2 className="m-0 text-sm font-semibold text-white">
+                <h2 className="m-0 text-sm font-semibold text-slate-900 dark:text-white">
                   AI Assistant
                 </h2>
-                <p className="text-xs text-slate-500">
-                  Online
+                <p className="text-[11px] text-emerald-500">
+                  Online · replies instantly
                 </p>
               </div>
             </div>
-
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-900 text-slate-300 transition-colors hover:border-slate-500 hover:text-white"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-transparent text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-700 dark:border-slate-700 dark:text-slate-500 dark:hover:border-slate-600 dark:hover:text-slate-300"
               aria-label="Close chat"
-              title="Close chat"
             >
-              <X size={16} />
+              <X size={15} />
             </button>
           </header>
 
-          <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
-            {messages.map((message) => {
-              const isUser = message.role === "user";
-
-              return (
-                <div
-                  key={message.id}
-                  className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[82%] rounded-xl px-3 py-2 text-sm leading-relaxed ${
-                      isUser
-                        ? "bg-blue-700 text-white"
-                        : message.tone === "error"
-                          ? "border border-rose-800 bg-rose-950 text-rose-200"
-                          : "border border-slate-800 bg-slate-900 text-slate-200"
-                    }`}
-                  >
-                    <p className="whitespace-pre-line break-words">
-                      {message.text}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-
-            {sending && (
-              <div className="flex justify-start">
-                <div className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-300">
-                  <Loader2 size={14} className="animate-spin" />
-                  Thinking
-                </div>
-              </div>
-            )}
-
+          {/* Messages */}
+          <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
+            <p className="text-center text-[11px] text-slate-400 dark:text-slate-600">Today</p>
+            {messages.map((message) => (
+              <Message key={message.id} message={message} />
+            ))}
+            {sending && <TypingIndicator />}
             <div ref={messagesEndRef} />
           </div>
 
-          <form onSubmit={handleSubmit} className="border-t border-slate-800 bg-slate-900 p-3">
+          {/* Input */}
+          <div className="border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900">
             <div className="flex items-end gap-2">
               <textarea
+                ref={textareaRef}
                 value={prompt}
-                onChange={(event) => setPrompt(event.target.value)}
+                onChange={(e) => {
+                  setPrompt(e.target.value);
+                  autoResize();
+                }}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask a question"
+                placeholder="Ask a question…"
                 rows={1}
-                className="max-h-28 min-h-10 flex-1 resize-none rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-slate-500 focus:border-blue-500"
+                className="max-h-24 min-h-[38px] flex-1 resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13.5px] text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-600 dark:focus:border-blue-600"
               />
               <button
-                type="submit"
+                type="button"
+                onClick={handleSubmit}
                 disabled={!prompt.trim() || sending}
-                className="flex h-10 w-10 items-center justify-center rounded-lg border border-blue-700 bg-blue-950 text-blue-300 transition-colors hover:border-blue-500 hover:text-white disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-900 disabled:text-slate-600"
+                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
                 aria-label="Send message"
-                title="Send message"
               >
-                {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                <Send size={15} />
               </button>
             </div>
-          </form>
+          </div>
         </section>
       )}
 
+      {/* Launcher */}
       <button
         type="button"
-        onClick={() => setOpen((currentOpen) => !currentOpen)}
-        className="ml-auto flex h-14 w-14 items-center justify-center rounded-full border border-blue-600 bg-blue-700 text-white shadow-xl shadow-blue-950/40 transition-transform hover:scale-105 hover:bg-blue-600"
-        aria-label={open ? "Hide AI assistant" : "Open AI assistant"}
-        title={open ? "Hide AI assistant" : "Open AI assistant"}
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex h-13 w-13 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg shadow-blue-500/25 transition-transform hover:scale-105 hover:bg-blue-600"
+        aria-label={open ? "Close chat" : "Open chat"}
+        style={{ width: 52, height: 52 }}
       >
-        {open ? <X size={22} /> : <MessageCircle size={24} />}
+        {open ? <X size={20} /> : <MessageCircle size={22} />}
       </button>
     </div>
   );

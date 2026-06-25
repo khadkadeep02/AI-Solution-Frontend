@@ -1,119 +1,123 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { ChevronDown } from "lucide-react";
 
-const API_BASE = "http://127.0.0.1:8000/api";
+const API_BASE = import.meta.env.VITE_API_BASE;
 
-const COLOR_MAP = {
-  blue:   { bg: "bg-blue-50",   icon: "text-blue-700",   tag: "bg-blue-50 text-blue-800",   imageBg: "bg-blue-50"   },
-  pink:   { bg: "bg-pink-50",   icon: "text-pink-700",   tag: "bg-pink-50 text-pink-800",   imageBg: "bg-pink-50"   },
-  amber:  { bg: "bg-amber-50",  icon: "text-amber-700",  tag: "bg-amber-50 text-amber-800",  imageBg: "bg-amber-50"  },
-  teal:   { bg: "bg-teal-50",   icon: "text-teal-700",   tag: "bg-teal-50 text-teal-800",   imageBg: "bg-teal-50"   },
-  coral:  { bg: "bg-orange-50", icon: "text-orange-700", tag: "bg-orange-50 text-orange-800", imageBg: "bg-orange-50" },
-  purple: { bg: "bg-purple-50", icon: "text-purple-700", tag: "bg-purple-50 text-purple-800", imageBg: "bg-purple-50" },
+const ACCENT = {
+  blue:   { color: "#3b82f6", bg: "rgba(59,130,246,0.12)",  line: "#1d3a5c", gradient: "from-[#080e1a] to-[#0d1f35]" },
+  purple: { color: "#8b5cf6", bg: "rgba(139,92,246,0.12)",  line: "#2d1f5e", gradient: "from-[#080e1a] to-[#1a0f2a]" },
+  teal:   { color: "#14b8a6", bg: "rgba(20,184,166,0.12)",  line: "#0f3330", gradient: "from-[#080e1a] to-[#04191a]" },
+  amber:  { color: "#f59e0b", bg: "rgba(245,158,11,0.12)",  line: "#3d2a05", gradient: "from-[#080e1a] to-[#1a1000]" },
+  coral:  { color: "#f97316", bg: "rgba(249,115,22,0.12)",  line: "#3d1500", gradient: "from-[#080e1a] to-[#1a0d00]" },
+  pink:   { color: "#ec4899", bg: "rgba(236,72,153,0.12)",  line: "#3d0f2a", gradient: "from-[#080e1a] to-[#1a0015]" },
 };
 
-function ServiceImagePlaceholder({ service, colors }) {
+function ImagePanel({ service, accent, imageLeft }) {
   return (
-    <div 
-  className={`w-full h-[320px] flex items-center justify-center overflow-hidden ${colors.imageBg}`}
-      >
+    <div
+      className={`relative min-h-[340px] bg-gradient-to-br ${accent.gradient} flex items-center justify-center overflow-hidden ${
+        imageLeft ? "md:order-first" : "md:order-last"
+      } order-first`}
+    >
       {service.image ? (
-        <img
-          src={service.image}
-          alt={service.title}
-          className="w-full h-full object-fit"
-        />
+        <>
+          <img src={service.image} alt={service.title}
+            className="w-full h-full object-cover absolute inset-0 opacity-80" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#080e1a]/40 to-transparent" />
+        </>
       ) : (
-        <div className="flex flex-col items-center gap-4 opacity-40">
-          {service.icon && (
-            <i className={`ti ${service.icon} text-[64px] ${colors.icon}`} aria-hidden="true" />
-          )}
-        </div>
+        /* Large ghosted icon as illustration */
+        service.icon && (
+          <i
+            className={`ti ${service.icon}`}
+            style={{ fontSize: 96, color: accent.color, opacity: 0.12 }}
+            aria-hidden="true"
+          />
+        )
       )}
     </div>
   );
 }
 
 function ServiceRow({ service, index }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const shortText   = service.short_description || service.description;
-  const fullText    = service.full_description;
-  const colorKey    = service.color ?? "blue";
-  const colors      = COLOR_MAP[colorKey] ?? COLOR_MAP.blue;
-  const paddedIndex = String(index + 1).padStart(2, "0");
-
-  // Even index → image left, odd → image right
-  const imageLeft = index % 2 === 0;
+  const [expanded, setExpanded] = useState(false);
+  const imageLeft  = index % 2 === 0;
+  const accentKey  = service.color ?? "blue";
+  const accent     = ACCENT[accentKey] ?? ACCENT.blue;
+  const shortText  = service.short_description || service.description;
+  const fullText   = service.full_description;
 
   return (
-    <div className="grid md:grid-cols-2 border border-slate-200 dark:border-slate-700/60 rounded-2xl overflow-hidden mb-5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors duration-200">
+    <div className="grid md:grid-cols-2 rounded-2xl overflow-hidden border border-white/[0.06] mb-4">
+      <ImagePanel service={service} accent={accent} imageLeft={imageLeft} />
 
-      {/* Image panel */}
-      <div className={`${imageLeft ? "md:order-first" : "md:order-last"} order-first`}>
-        <ServiceImagePlaceholder service={service} colors={colors} />
-      </div>
-
-      {/* Content panel */}
-      <div className="p-8 md:p-10 flex flex-col justify-center">
-
+      {/* Content */}
+      <div
+        className={`px-11 py-12 flex flex-col justify-center bg-[#0d1117] ${
+          imageLeft ? "md:order-last" : "md:order-first order-last"
+        }`}
+      >
         {/* Index */}
-        <p className="text-xs font-medium tracking-widest text-slate-400 dark:text-slate-500 mb-5 font-mono">
-          {paddedIndex}
+        <p className="text-[10px] font-medium text-slate-800 tabular-nums tracking-[0.08em] mb-5">
+          {String(index + 1).padStart(2, "0")}
         </p>
 
-        {/* Icon */}
-        {service.icon && (
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-4 flex-shrink-0 ${colors.bg}`}>
-            <i className={`ti ${service.icon} text-[18px] ${colors.icon}`} aria-hidden="true" />
+        {/* Tag pill with icon */}
+        <div
+          className="inline-flex items-center gap-2 pl-2 pr-3.5 py-1.5 rounded-full border border-white/[0.07] mb-5 w-fit"
+        >
+          <div
+            className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: accent.bg }}
+          >
+            {service.icon && (
+              <i className={`ti ${service.icon}`}
+                style={{ fontSize: 13, color: accent.color }} aria-hidden="true" />
+            )}
           </div>
-        )}
-
-        {/* Tag */}
-        {service.tag && (
-          <span className={`inline-block text-[11px] font-medium tracking-wide px-2.5 py-0.5 rounded-full mb-3 ${colors.tag}`}>
-            {service.tag}
+          <span className="text-[11px] font-medium tracking-wide" style={{ color: accent.color }}>
+            {service.tag || service.title}
           </span>
-        )}
+        </div>
+
+        {/* Accent rule */}
+        <div className="w-7 h-[2px] rounded-full mb-4" style={{ background: accent.line }} />
 
         {/* Title */}
-        <h3 className="text-2xl font-serif font-normal text-slate-900 dark:text-white leading-snug mb-3">
+        <h3 className="text-xl font-semibold text-slate-100 leading-snug mb-3.5">
           {service.title}
         </h3>
 
-        {/* Short description */}
-        <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+        {/* Description */}
+        <p className="text-[13px] text-slate-500 leading-[1.85] mb-5">
           {shortText}
         </p>
 
-        {/* Expanded content */}
+        {/* Expandable full text */}
         {fullText && (
-          <div
-            className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${
-              isExpanded ? "max-h-64" : "max-h-0"
-            }`}
-          >
-            <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400 mt-4 pt-4 border-t border-slate-100 dark:border-slate-700/60">
+          <>
+            <div className="h-px bg-white/[0.05] mb-4" />
+            <div
+              className={`text-[13px] text-slate-600 leading-[1.85] overflow-hidden transition-all duration-300 ${
+                expanded ? "max-h-48 opacity-100 mb-4" : "max-h-0 opacity-0"
+              }`}
+            >
               {fullText}
-            </p>
-          </div>
-        )}
-
-        {/* Toggle */}
-        {fullText && (
-          <button
-            type="button"
-            onClick={() => setIsExpanded((prev) => !prev)}
-            aria-expanded={isExpanded}
-            className="inline-flex items-center gap-1.5 mt-5 text-xs font-medium text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors group self-start"
-          >
-            {isExpanded ? "Show less" : "Read more"}
-            <ChevronDown
-              size={14}
-              className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
-            />
-          </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setExpanded((p) => !p)}
+              className="inline-flex items-center gap-1.5 text-[12px] font-medium text-slate-600 hover:text-slate-300 transition-colors self-start"
+            >
+              {expanded ? "Show less" : "Read more"}
+              <svg
+                className={`w-3 h-3 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+            </button>
+          </>
         )}
       </div>
     </div>
@@ -122,17 +126,15 @@ function ServiceRow({ service, index }) {
 
 function SkeletonRow({ reverse }) {
   return (
-    <div className="grid md:grid-cols-2 border border-slate-200 dark:border-slate-700/60 rounded-2xl overflow-hidden mb-5 animate-pulse">
-      <div className={`min-h-[280px] bg-slate-100 dark:bg-slate-800 ${reverse ? "md:order-last" : ""}`} />
-      <div className="p-10 flex flex-col gap-4">
-        <div className="w-8 h-3 rounded bg-slate-100 dark:bg-slate-800" />
-        <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800" />
-        <div className="w-16 h-4 rounded-full bg-slate-100 dark:bg-slate-800" />
-        <div className="w-2/3 h-6 rounded bg-slate-100 dark:bg-slate-800" />
+    <div className="grid md:grid-cols-2 rounded-2xl overflow-hidden border border-white/[0.06] mb-4 animate-pulse">
+      <div className={`min-h-[340px] bg-slate-900 ${reverse ? "md:order-last" : ""}`} />
+      <div className="px-11 py-12 bg-[#0d1117] flex flex-col gap-4">
+        <div className="w-6 h-2.5 rounded bg-slate-800" />
+        <div className="w-24 h-7 rounded-full bg-slate-800" />
+        <div className="w-7 h-0.5 rounded bg-slate-800" />
+        <div className="w-2/3 h-5 rounded bg-slate-800" />
         <div className="space-y-2">
-          <div className="h-3.5 rounded bg-slate-100 dark:bg-slate-800" />
-          <div className="h-3.5 rounded bg-slate-100 dark:bg-slate-800 w-5/6" />
-          <div className="h-3.5 rounded bg-slate-100 dark:bg-slate-800 w-4/6" />
+          {[1,2,3].map(i => <div key={i} className="h-3 rounded bg-slate-800" style={{width: `${90 - i*10}%`}} />)}
         </div>
       </div>
     </div>
@@ -142,13 +144,13 @@ function SkeletonRow({ reverse }) {
 export default function ServicesAlternating() {
   const [services, setServices] = useState([]);
   const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(false);
 
   useEffect(() => {
     let active = true;
-    axios
-      .get(`${API_BASE}/services/`)
+    axios.get(`${API_BASE}/services/`)
       .then((res) => { if (active) setServices(Array.isArray(res.data) ? res.data : []); })
-      .catch((err) => console.error("Failed to load services:", err))
+      .catch(() => { if (active) setError(true); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
@@ -156,26 +158,26 @@ export default function ServicesAlternating() {
   return (
     <section className="max-w-5xl mx-auto px-6 mb-32">
 
-      {/* Section header */}
-      <div className="mb-10">
-        <p className="text-[11px] font-medium tracking-[0.12em] uppercase text-slate-400 dark:text-slate-500 mb-2">
+      <div className="mb-14">
+        <p className="text-[11px] font-medium tracking-[0.1em] uppercase text-slate-700 mb-2">
           What we offer
         </p>
-        <h2 className="font-serif text-4xl font-normal text-slate-900 dark:text-white">
+        <h2 className="text-4xl font-semibold text-slate-100">
           Our services
         </h2>
       </div>
 
-      {/* Alternating rows */}
       {loading ? (
-        [0, 1, 2].map((i) => <SkeletonRow key={i} reverse={i % 2 !== 0} />)
+        [0,1,2].map((i) => <SkeletonRow key={i} reverse={i % 2 !== 0} />)
+      ) : error ? (
+        <div className="py-16 text-center text-sm text-slate-600 border border-white/[0.06] rounded-2xl">
+          Failed to load services. Please try again later.
+        </div>
       ) : services.length > 0 ? (
-        services.map((service, index) => (
-          <ServiceRow key={service.id ?? service.title} service={service} index={index} />
-        ))
+        services.map((s, i) => <ServiceRow key={s.id ?? s.title} service={s} index={i} />)
       ) : (
-        <div className="py-16 text-center text-sm text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700/60 rounded-2xl">
-          No services are available at this time.
+        <div className="py-16 text-center text-sm text-slate-600 border border-white/[0.06] rounded-2xl">
+          No services available at this time.
         </div>
       )}
     </section>

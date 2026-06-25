@@ -8,11 +8,13 @@ export default function MainLayout() {
     <>
       <Header />
 
-      <main className="pt-20">
+      <main className="pt-10">
         <Outlet />
       </main>
-
+      <div className="">
       <Footer />
+      </div>
+
     </>
   );
 }
