@@ -117,7 +117,7 @@ function Message({ message }) {
           </div>
         )}
         <div
-          className={`max-w-[85%] min-w-0 rounded-2xl px-3 py-2 text-[13.5px] leading-relaxed [overflow-wrap:break-word] [word-break:normal] [hyphens:auto] ${
+          className={`max-w-full min-w-0 rounded-2xl px-3 py-2 text-[13.5px] leading-relaxed [overflow-wrap:break-word] [word-break:normal] [hyphens:auto] ${
             isUser
               ? "rounded-br-sm bg-blue-500 text-white"
               : message.tone === "error"
